@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<title>Document</title>
+	<meta name="viewport" content="width=device-width,inital-scale=1.0" />
+	<style>
+	html,body{margin:0;padding:0;}
+	.box{margin:0 auto;overflow: hidden;transition:all 0.3s;position: relative;}
+	.box img{border:1px solid #ddd;padding: 10px;display: inline-block;float: left;margin: 0px 0px 10px 10px;border-radius: 5px;box-sizing:border-box;position: absolute;left: -5px;transition:all 0.3s;}
+	</style>
+	<script type="text/javascript">
+	/** README
+	* 1、这是一个用JavaScript原生写法写的瀑布流Demo
+	* 2、需要在【这里是需要配置的参数】处配置相关参数
+	* 3、具体请见如下code
+	*/
+	var waterFall={
+		props:{ //属性
+			itemWidth:300, //单个瀑布流元素的宽度，单位是px【这里是需要配置的参数】
+			space:10, //单个瀑布流元素间隔，单位是px【这里是需要配置的参数】
+			width:0, //页面宽度width，需要动态获得
+			cols:0, //页面列数cols，需要根据页面宽度动态计算
+			wapWidth:640, //页面在多少宽度时使用2列布局，兼容手机端，这里默认是640，可配置指定宽度
+		},
+		el:{ //元素
+			parent:null, //瀑布流盒子元素
+			childs:null //子元素
+		},
+		itemArr:[], //设置一个存放每列高度数据的数组，数组的长度就是列宽
+		init:function(){ //初始化
+			var wfp=this.props;
+			var wfe=this.el;
+			//重置数据列高度数组
+			this.itemArr=[];
+			//瀑布流盒子对象【这里是需要配置的参数】
+			wfe.parent=document.getElementById("box");
+			//瀑布流内容对象【这里是需要配置的参数】
+			wfe.childs=wfe.parent.getElementsByTagName("img");
+			//计算页面宽度
+			wfp.width=document.body.clientWidth;
+			//如果页面宽度高于640px，则按PC显示模式
+			if(wfp.width>waterFall.props.wapWidth){
+				//设置瀑布流元素宽度，因为是可配置项，所以这里要动态设置DOM宽度
+				this.method.setItemWidth(wfe.childs,wfp.itemWidth);
+				this.method.setBoxWidth(wfp,wfe);
+			}else{
+			//如果页面宽度在640px及以下，则按手机瀑布流模式
+				//设置瀑布流元素宽度，因为是可配置项，所以这里要动态设置DOM宽度
+				this.method.setItemWidth(wfe.childs,(wfp.width-waterFall.props.space*3)/2);
+				this.method.setBoxWapWidth(wfp,wfe);
+			}
+			this.method.getFirstRows(this.itemArr,wfe.childs,wfp.cols);
+		},	
+		method:{ //方法
+			setBoxWidth:function(wfp,wfe){
+				//设置页面列数
+				wfp.cols=Math.floor(wfp.width/wfp.itemWidth);
+				//设置box容器的宽度等信息以便保持在页面内居中显示
+				wfe.parent.style.width=wfp.cols*(wfp.itemWidth+wfp.space)+"px";
+				wfe.parent.style.left=-wfp.space/2+"px";
+			},
+			setBoxWapWidth:function(wfp,wfe){
+				wfp.cols=2;//固定设置为2列	
+				//设置box容器的宽度等信息以便保持在页面内居中显示
+				wfe.parent.style.width=wfp.width+"px";
+				wfe.parent.style.left="0px";
+			},
+			setItemWidth:function(childs,w){ 
+			//根据配置的相关参数，设置瀑布流元素的宽度
+				for(var i=0;i<childs.length;i++){
+					childs[i].style.width=w+"px";
+				}
+			},
+			getFirstRows:function(itemArr,childs,cols){
+				//取得第一行瀑布流元素高度
+				for(var i=0;i<cols;i++){
+					//第一行的元素距顶部始终为0
+					childs[i].style.top="0px";
+					if(waterFall.props.width>waterFall.props.wapWidth){
+						//第一行的元素距左侧的宽度动态计算出来
+						childs[i].style.left=(waterFall.props.itemWidth+waterFall.props.space)*i+"px";
+					}else{
+						if(i%2==0){
+							childs[i].style.left="0px";
+						}else{
+							childs[i].style.left=childs[0].offsetWidth+waterFall.props.space+"px";
+						}
+					}
+					//更新存放的数组
+					itemArr.push(childs[i].offsetHeight);
+				}
+				waterFall.el.parent.style.height=Math.max.apply(null,itemArr)+"px";
+				this.setPosition(itemArr,childs,cols);
+			},
+			setPosition:function(itemArr,childs,cols){ 
+			//设置瀑布流内容元素的定位
+				//单个元素宽度加上边距，一共在页面中所占的宽度
+				var wfpw=waterFall.props.itemWidth+waterFall.props.space;
+				for(var i=cols;i<childs.length;i++){
+					//获取列的最小高度，因为后面元素要放在每次最低列的最后一个元素的下面
+					var min=Math.min.apply(null,itemArr);
+					//获取最小高度在数组中的索引，即在第几列
+					var index=this.getMinIndex(itemArr,min);
+					if(index>-1){
+						//如果返回了索引，则设置元素定位
+						if(waterFall.props.width>waterFall.props.wapWidth){
+							//设置瀑布流元素距离左侧的位置
+							childs[i].style.left=wfpw*index+"px";
+						}else{
+							if(index%2==0){
+								childs[i].style.left="0px";
+							}else{
+								childs[i].style.left=childs[0].offsetWidth+waterFall.props.space+"px";
+							}
+						}
+						//设置瀑布流元素距离顶部的位置
+						childs[i].style.top=itemArr[index]+waterFall.props.space+"px";
+						//更新最低列的高度
+						itemArr[index]+=childs[i].offsetHeight+waterFall.props.space;
+						//更新瀑布流盒子的高度
+						waterFall.el.parent.style.height=Math.max.apply(null,itemArr)+"px";
+					}
+				}
+			},
+			getMinIndex:function(arr,item){
+				//获取最小高度所在的列的索引
+				//先用原型判断
+				if(Array.prototype.indexOf){
+					return arr.indexOf(item);
+				}else{
+					//如果是IE浏览器
+					for(var i=0;i<arr.length;i++){
+						//判断数组里有这个元素
+						if(arr[i]===item){ 
+							//返回相应的下标
+							return i;
+						}
+					}
+				}
+				//如果找不到就返回-1
+				return -1;
+			},
+			loadingDOM:function(){
+				//装载DOM
+				for(var i=1;i<=22;i++){
+					var img=new Image();
+					img.src='images/'+i+'.jpg';
+					waterFall.el.parent.appendChild(img);
+				}
+			}
+		}
+	};
+
+	window.onload=function(){
+		//初始化
+		waterFall.init();
+		//监听页面宽度的变化
+		window.onresize=function(){
+			waterFall.init();
+		};
+		//拖动滚动条上下滑动事件
+		window.onscroll=function(){
+			//当滚动条滑动到页面底部的时候，加载更多瀑布流元素进来
+			if(window.scrollY+window.innerHeight===waterFall.el.parent.offsetHeight){
+				waterFall.method.loadingDOM();
+				waterFall.init();
+			}
+		};
+	};
+	</script>
+</head>
+<body>
+	<div id="box" class="box">
+		<img src="images/1.jpg" alt="">
+		<img src="images/2.jpg" alt="">
+		<img src="images/3.jpg" alt="">
+		<img src="images/4.jpg" alt="">
+		<img src="images/5.jpg" alt="">
+		<img src="images/6.jpg" alt="">
+		<img src="images/7.jpg" alt="">
+		<img src="images/8.jpg" alt="">
+		<img src="images/9.jpg" alt="">
+		<img src="images/10.jpg" alt="">
+		<img src="images/11.jpg" alt="">
+		<img src="images/12.jpg" alt="">
+		<img src="images/13.jpg" alt="">
+		<img src="images/14.jpg" alt="">
+		<img src="images/15.jpg" alt="">
+		<img src="images/16.jpg" alt="">
+		<img src="images/17.jpg" alt="">
+		<img src="images/18.jpg" alt="">
+		<img src="images/19.jpg" alt="">
+		<img src="images/20.jpg" alt="">
+		<img src="images/21.jpg" alt="">
+		<img src="images/22.jpg" alt="">
+	</div>
+</body>
+</html>
